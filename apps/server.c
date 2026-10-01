@@ -1,8 +1,20 @@
-#include "server.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <pthread.h>
+
+#include "mega_senha.h"
+
+#define PORT 8080
+#define MAX_CLIENTS 100
+#define BUFFER_SIZE 1024
 
 typedef struct {
     int socket;
     int id;
+    int id_partida;
 } Client;
 Client clients[MAX_CLIENTS];
 int client_count = 0;
@@ -10,11 +22,11 @@ pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
  // Envia uma mensagem para todos os clientes, exceto o cliente que enviou a mensagem.
-void broadcast_message(const char *message, int sender_socket)
+void broadcast_message(const char *message, int sender_socket, int sender_id_partida)
 {
     pthread_mutex_lock(&clients_mutex);
     for (int i = 0; i < client_count; i++) {
-        if (clients[i].socket != sender_socket) {
+        if (clients[i].socket != sender_socket && clients[i].id_partida == sender_id_partida) {
             if (send(clients[i].socket,
                      message,
                      strlen(message),
@@ -30,21 +42,15 @@ void broadcast_message(const char *message, int sender_socket)
 void remove_client(int socket)
 {
     pthread_mutex_lock(&clients_mutex);
-
     for (int i = 0; i < client_count; i++) {
-
         if (clients[i].socket == socket) {
-
             for (int j = i; j < client_count - 1; j++) {
                 clients[j] = clients[j + 1];
             }
-
             client_count--;
-
             break;
         }
     }
-
     pthread_mutex_unlock(&clients_mutex);
 }
 
@@ -54,14 +60,65 @@ void *handle_client(void *arg)
     Client *client = (Client *)arg;
     char buffer[BUFFER_SIZE];
     printf("Cliente %d conectado.\n", client->id);
+
+    // Busca outro cliente com id_partida == -1, ou seja, sem partida
+    if (client->id_partida == -1) {
+        printf("Buscando partida...\n");
+        // Busca algum cliente sem partida a cada 1 segundo
+        while(1){
+            int oponente_index = -1;
+            sleep(1);
+            pthread_mutex_lock(&clients_mutex);
+            // verifica no vetor global se já foi colocado em uma partida por outro cliente 
+            for (int i = 0; i < client_count; i++) {
+                if (clients[i].id == client->id && clients[i].id_partida != -1) {
+                    client->id_partida = clients[i].id_partida; // atualiza a variável local da thread
+                    break;
+                }
+            }
+            // em caso positivo, termina a busca 
+            if (client->id_partida != -1){
+                pthread_mutex_unlock(&clients_mutex);
+                break;
+            }
+            // caso contrário, procura outro cliente sem partida para alocar uma nova partida
+            for (int i = 0; i < client_count; i++) {
+                if (clients[i].id != client->id && clients[i].id_partida == -1) {
+                    oponente_index = i;
+                    break;
+                }
+            }
+            // caso tenha encontrado, cria a nova partida
+            if(oponente_index != -1){
+                Partida* nova_partida = criar_partida(clients[oponente_index].id, client->id);
+                printf("Partida de ID %d criada com os clientes de ID %d e %d.\n", nova_partida->id_partida, nova_partida->id_client_1, nova_partida->id_client_2);
+                // Atualiza o cliente atual na thread e no vetor global
+                client->id_partida = nova_partida->id_partida;    
+                for (int i = 0; i < client_count; i++) {
+                    if (clients[i].id == client->id) {
+                        clients[i].id_partida = nova_partida->id_partida;
+                        break;
+                    }
+                }
+                // atualiza registro global do oponente
+                clients[oponente_index].id_partida = nova_partida->id_partida;
+                // libera mutex
+                pthread_mutex_unlock(&clients_mutex);
+                break;
+            }
+            // caso nao tenha encontrado, libera mutex e continua a busca
+            pthread_mutex_unlock(&clients_mutex);
+        }
+    }
+
     // Informa aos outros clientes que alguém entrou.
     char join_message[BUFFER_SIZE];
     snprintf(join_message,
              sizeof(join_message),
-             "[Servidor] Cliente %d entrou no chat.\n",
+             "[Servidor] Cliente %d entrou na partida.\n",
              client->id);
 
-    broadcast_message(join_message, client->socket);
+    broadcast_message(join_message, client->socket, client->id_partida);
     // Recebe mensagens enquanto o cliente estiver conectado.
     while (1) {
         memset(buffer, 0, sizeof(buffer));
@@ -92,7 +149,7 @@ void *handle_client(void *arg)
             client->id,
             buffer
         );
-        broadcast_message(message, client->socket);
+        broadcast_message(message, client->socket, client->id_partida);
     }
     // Informa aos outros clientes que alguém saiu.
     char leave_message[BUFFER_SIZE];
@@ -103,7 +160,7 @@ void *handle_client(void *arg)
         client->id
     );
     remove_client(client->socket);
-    broadcast_message(leave_message, -1);
+    broadcast_message(leave_message, -1, client->id_partida);
     close(client->socket);
     free(client);
     return NULL;
@@ -219,6 +276,7 @@ int main()
 
         client->socket = client_socket;
         client->id = client_id++;
+        client->id_partida = -1;
 
         clients[client_count++] = *client;
 
