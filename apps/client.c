@@ -5,6 +5,8 @@
 #include <arpa/inet.h>
 #include <pthread.h>
 
+#include "hash_palavras.h"
+
 #define PORT 8080
 #define BUFFER_SIZE 1024
 int socket_fd;
@@ -41,12 +43,20 @@ void *receive_messages(void *arg)
 int main(int argc, char *argv[])
 {
     struct sockaddr_in server_address;
+    char ip[20];
     // O IP do servidor é passado pela linha de comando. Exemplo: ./client 192.168.1.10
-    if (argc != 2) {
+    if (argc == 1) {
+        strcpy(ip,"0.0.0.0");
+    }
+    else if (argc != 2) {
         printf("Uso: %s <IP_DO_SERVIDOR>\n", argv[0]);
         return 1;
     }
-    // 1. Criação do socket.
+    else {
+        strcpy(ip,argv[1]);
+    }
+    
+    // Criação do socket.
     socket_fd = socket(
         AF_INET,
         SOCK_STREAM,
@@ -63,14 +73,14 @@ int main(int argc, char *argv[])
     // Converte o IP informado para formato utilizado pelo socket.
     if (inet_pton(
             AF_INET,
-            argv[1],
+            ip,
             &server_address.sin_addr
         ) <= 0) {
-        printf("IP inválido: %s\n", argv[1]);
+        printf("IP inválido: %s\n", ip);
         close(socket_fd);
         return 1;
     }
-    // 2. Conecta ao servidor.
+    // Conecta ao servidor.
     if (connect(
             socket_fd,
             (struct sockaddr *)&server_address,
@@ -81,14 +91,16 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    printf("=================================\n");
-    printf("          CHAT CLIENTE\n");
-    printf("=================================\n");
-    printf("Conectado ao servidor %s:%d\n", argv[1], PORT);
-    printf("Digite suas mensagens abaixo.\n");
-    printf("Digite /sair para sair.\n\n");
+    // Inicializa hash do dicionário
+    hash_inicializar(PATH_DICIONARIO);
 
-    // 3. Cria thread responsável por receber mensagens.
+    printf("=================================\n");
+    printf("         MEGA SENHA\n");
+    printf("=================================\n");
+    printf("Conectado ao servidor %s:%d\n", ip, PORT);
+    printf("\n AGUARDANDO OUTRO JOGADOR...\n\n");
+
+    // Cria thread responsável por receber mensagens.
     pthread_t receive_thread;
     if (pthread_create(
             &receive_thread,
@@ -101,7 +113,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     
-     // 4. Loop principal:lê mensagens do usuário e envia para o servidor.
+     // Loop principal:lê mensagens do usuário e envia para o servidor.
     char message[BUFFER_SIZE];
     while (1) {
         printf("> ");

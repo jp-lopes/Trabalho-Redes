@@ -5,6 +5,9 @@
 
 #define HASH_TABLE_SIZE 250007u
 
+#define PATH_DICIONARIO "data/dicionario_validacao_80000.csv"
+
+
 typedef struct HashNode {
     char *palavra;
     struct HashNode *prox;

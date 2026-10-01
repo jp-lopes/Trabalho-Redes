@@ -1,9 +1,10 @@
-#include "hash_palavras.h"
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+
+#include "hash_palavras.h"
 
 /*
  * Seed escolhida previamente testando esta funcao sobre o
@@ -192,7 +193,6 @@ int hash_inicializar(const char *caminho_csv)
     }
 
     while (fgets(linha, sizeof(linha), arquivo) != NULL) {
-        char *virgula;
 
         /*
          * Remove \n e \r do final da linha.
@@ -208,10 +208,6 @@ int hash_inicializar(const char *caminho_csv)
          *
          * cachorro
          */
-        virgula = strchr(linha, ',');
-
-        if (virgula != NULL)
-            *virgula = '\0';
 
         if (linha[0] == '\0')
             continue;
