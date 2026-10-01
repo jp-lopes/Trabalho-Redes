@@ -1,3 +1,3 @@
-all: 
-	gcc src/server.c -Wall -Wextra -g -I include -pthread -o bin/server
-	gcc src/client.c -Wall -Wextra -g -I include -pthread -o bin/client
+all:
+	gcc apps/server.c src/*.c -I include -Wall -Wextra -g -pthread -o bin/server
+	gcc apps/client.c src/*.c -I include -Wall -Wextra -g -pthread -o bin/client
