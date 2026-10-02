@@ -1,29 +1,25 @@
 #ifndef MEGA_SENHA_H
 #define MEGA_SENHA_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include "hash_palavras.h"
+#include "funcoes_server.h"
+
 #define PATH_SENHAS "data/palavras_senha_5000.csv"
 #define QTD_TOTAL_SENHAS 5000
 #define QTD_TOTAL_SENHAS_FACEIS 2000
 #define QTD_TOTAL_SENHAS_MEDIAS 2000
 #define QTD_TOTAL_SENHAS_DIFICEIS 1000
+#define TAM_PALAVRA 50
 
 typedef struct {
-    char palavra[20];
-    char radical[20];
+    char palavra[TAM_PALAVRA];
+    char radical[TAM_PALAVRA];
     char dificuldade;
 } Senha;
-
-typedef struct {
-    int id_partida;
-    int id_client_1;
-    int id_client_2;
-    int pontos;
-    int id_cliente_adivinha;
-    Senha senha_atual;
-    Senha historico_de_senhas[100];
-} Partida;
-
-Partida* criar_partida(int id_client_1, int id_client_2);
 
 void carregar_senhas(char* path_senhas);
 

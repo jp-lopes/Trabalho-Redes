@@ -1,29 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <arpa/inet.h>
-#include <pthread.h>
-
-#include "mega_senha.h"
-#include "hash_palavras.h"
-
-#define PORT 8080
-#define MAX_CLIENTS 100
-#define BUFFER_SIZE 1024
-
-#define ESPERANDO_PARTIDA 0
-#define DANDO_DICA 1
-#define ESPERANDO_CHUTE 2
-#define DANDO_CHUTE 3
-#define ESPERANDO_DICA 4
-
-typedef struct {
-    int socket;
-    int id;
-    Partida partida;
-    int estado; 
-} Client;
+#include "funcoes_server.h"
 
 Client clients[MAX_CLIENTS];
 int client_count = 0;

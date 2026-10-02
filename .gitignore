@@ -1,2 +1,4 @@
 bin/client
 bin/server
+/.vscode
+/outros

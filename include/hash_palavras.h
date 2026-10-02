@@ -2,6 +2,10 @@
 #define HASH_PALAVRAS_H
 
 #include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define HASH_TABLE_SIZE 250007u
 
