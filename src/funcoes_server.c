@@ -589,12 +589,17 @@ void processar_mensagem(int id, char *mensagem)
     int estado = cliente->estado;
     pthread_mutex_unlock(&mutex);
 
-        // comandos e mensagens do chat global
+    // nome do cliente recebido
     if (estado == ESPERANDO_NOME) {
         if(strncmp(mensagem, "NOME|", 5) == 0) {
             pthread_mutex_lock(&mutex);
             Client *c = buscar_cliente_id(id);
-            strcpy(c->nome, mensagem+5);
+            if (c == NULL){
+                pthread_mutex_unlock(&mutex);
+                return;
+            }
+            strncpy(c->nome, mensagem+5, TAM_MAX_NOME_CLIENTE-1);
+            c->nome[TAM_MAX_NOME_CLIENTE-1] = '\0';
             c->estado = CHAT_GLOBAL;
             pthread_mutex_unlock(&mutex);
             enviar_mensagem_socket(c->socket, "NOME_OK");

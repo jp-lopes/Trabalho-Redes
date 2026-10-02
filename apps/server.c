@@ -85,14 +85,22 @@ int main(void) {
         novo->estado = ESPERANDO_NOME;
         novo->conectado = 1;
 
-        int id = novo->id;
+        //salva ID para passar para a thread
+        int* id = malloc(sizeof(int));
+        if (id == NULL){
+            pthread_mutex_unlock(&mutex);
+            close(socket_cliente);
+            continue;
+        }
+        * id = novo->id;
 
         pthread_mutex_unlock(&mutex);
 
         // cria thread para o cliente
         pthread_t thread;
-        if (pthread_create(&thread, NULL, handle_client, &id) != 0) {
-            desconectar(id);
+        if (pthread_create(&thread, NULL, handle_client, id) != 0) {
+            desconectar(*id);
+            free(id);
             continue;
         }
 

@@ -78,7 +78,8 @@ int main(int argc, char *argv[])
     while (1) {
         // obtem estado atual do jogo e printa no terminal dependendo dele
         int estado = obter_estado();
-
+        if (fgets(mensagem, sizeof(mensagem), stdin) == NULL) break;
+        
         // esperando nome
         if (estado == ESPERANDO_NOME) {
             char envio[BUFFER_SIZE+5];
@@ -89,8 +90,6 @@ int main(int argc, char *argv[])
 
         printf("> ");
         fflush(stdout);
-
-        if (fgets(mensagem, sizeof(mensagem), stdin) == NULL) break;
 
         //remove '\n'
         mensagem[strcspn(mensagem, "\r\n")] = '\0';
