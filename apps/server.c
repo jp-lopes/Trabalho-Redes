@@ -1,326 +1,106 @@
 #include "funcoes_server.h"
 
-Client clients[MAX_CLIENTS];
-int client_count = 0;
-pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
-
-
- // Envia uma mensagem para o cliente que esteja na mesma partida que sender_id_partida
-void broadcast_message(const char *message, int sender_socket, int sender_id_partida)
-{
-    pthread_mutex_lock(&clients_mutex);
-    for (int i = 0; i < client_count; i++) {
-        if (clients[i].socket != sender_socket && clients[i].partida.id_partida == sender_id_partida) {
-            if (send(clients[i].socket,
-                     message,
-                     strlen(message),
-                     0) < 0) {
-                perror("Erro ao enviar mensagem");
-            }
-        }
-    }
-    pthread_mutex_unlock(&clients_mutex);
-}
-
- // Remove um cliente da lista de clientes.
-void remove_client(int socket)
-{
-    pthread_mutex_lock(&clients_mutex);
-    for (int i = 0; i < client_count; i++) {
-        if (clients[i].socket == socket) {
-            for (int j = i; j < client_count - 1; j++) {
-                clients[j] = clients[j + 1];
-            }
-            client_count--;
-            break;
-        }
-    }
-    pthread_mutex_unlock(&clients_mutex);
-}
-
- // Função executada pela thread de cada cliente.
-void *handle_client(void *arg)
-{
-    Client *client = (Client *)arg;
-    client->estado = ESPERANDO_PARTIDA;
-    char buffer[BUFFER_SIZE];
-    printf("Cliente %d conectado.\n", client->id);
-
-    // Busca outro cliente com id_partida == -1, ou seja, sem partida
-    if (client->partida.id_partida == -1) {
-        printf("Buscando partida para o cliente %d...\n", client->id);
-        // Busca algum cliente sem partida a cada 1 segundo
-        while(1){
-            int oponente_index = -1;
-            sleep(1);
-            pthread_mutex_lock(&clients_mutex);
-            // verifica no vetor global se já foi colocado em uma partida por outro cliente 
-            for (int i = 0; i < client_count; i++) {
-                if (clients[i].id == client->id && clients[i].partida.id_partida != -1) {
-                    client->partida.id_partida = clients[i].partida.id_partida; // atualiza a variável local da thread
-                    break;
-                }
-            }
-            // em caso positivo, termina a busca 
-            if (client->partida.id_partida != -1){
-                pthread_mutex_unlock(&clients_mutex);
-                break;
-            }
-            // caso contrário, procura outro cliente sem partida para alocar uma nova partida
-            for (int i = 0; i < client_count; i++) {
-                if (clients[i].id != client->id && clients[i].partida.id_partida == -1) {
-                    oponente_index = i;
-                    break;
-                }
-            }
-            // caso tenha encontrado, cria a nova partida
-            if(oponente_index != -1){
-                Partida* nova_partida = criar_partida(clients[oponente_index].id, client->id);
-                Senha senha = sortear_senha();
-                nova_partida->senha_atual = senha;
-                printf("Partida de ID %d criada com os clientes de ID %d e %d.\n", nova_partida->id_partida, nova_partida->id_client_1, nova_partida->id_client_2);
-                // Atualiza o cliente atual na thread e no vetor global
-                client->partida.id_partida = nova_partida->id_partida;    
-                for (int i = 0; i < client_count; i++) {
-                    if (clients[i].id == client->id) {
-                        clients[i].partida.id_partida = nova_partida->id_partida;
-                        break;
-                    }
-                }
-                // atualiza registro global do oponente
-                clients[oponente_index].partida.id_partida = nova_partida->id_partida;
-                // libera mutex
-                pthread_mutex_unlock(&clients_mutex);
-                break;
-            }
-            // caso nao tenha encontrado, libera mutex e continua a busca
-            pthread_mutex_unlock(&clients_mutex);
-        }
-    }
-
-    //informa ao outro cliente da partida que alguém entrou
-    char join_message[BUFFER_SIZE];
-    snprintf(join_message,
-             sizeof(join_message),
-             "[Servidor] Cliente %d entrou na partida.\n",
-             client->id);
-
-    broadcast_message(join_message, client->socket, client->partida.id_partida);
+int main(void) {
+    // inicializa os vetores
+    memset(clients, 0, sizeof(clients));
+    memset(partidas, 0, sizeof(partidas));
     
-    //define estado inicial dos clientes
-    if(client->id == client->partida.id_cliente_adivinha){
-        client->estado = ESPERANDO_DICA;
-    }
-    else {
-        client->estado = DANDO_DICA;
-    }
-    // Recebe mensagens enquanto o cliente estiver conectado
-    while (1) {
-        if(client->id == client->partida.id_cliente_adivinha){
-            if (client->estado == ESPERANDO_DICA) {
-                // não deve ler chute ainda
-                
-            }
-            else if (client->estado == DANDO_CHUTE) {
-                // recebe chute
-                // compara com senha
-                
-            }
-
-        }
-        else {
-            if (client->estado == DANDO_DICA) {
-            // recebe dica
-            // repassa para o outro jogador
-            }
-
-            else if (client->estado == ESPERANDO_CHUTE) {
-            // aguarda o outro jogador chutar
-            }
-
-        }
-
-        memset(buffer, 0, sizeof(buffer));
-        int bytes_received = recv(
-            client->socket,
-            buffer,
-            sizeof(buffer) - 1,
-            0
-        );
-        // recv() retornando 0 significa que o cliente fechou a conexão.
-        if (bytes_received == 0) {
-            printf("Cliente %d desconectou.\n", client->id);
-            break;
-        }
-        // recv() retornando -1 significa erro.
-        if (bytes_received < 0) {
-            perror("Erro ao receber mensagem");
-            break;
-        }
-        buffer[bytes_received] = '\0';
-        printf("Cliente %d: %s", client->id, buffer);
-        // Monta a mensagem que será enviada aos outros clientes.
-        char message[BUFFER_SIZE + 100];
-        snprintf(
-            message,
-            sizeof(message),
-            "Cliente %d: %s",
-            client->id,
-            buffer
-        );
-        broadcast_message(message, client->socket, client->partida.id_partida);
-    }
-    // Informa aos outros clientes que alguém saiu.
-    char leave_message[BUFFER_SIZE];
-    snprintf(
-        leave_message,
-        sizeof(leave_message),
-        "[Servidor] Cliente %d saiu do jogo.\n",
-        client->id
-    );
-    remove_client(client->socket);
-    broadcast_message(leave_message, -1, client->partida.id_partida);
-    close(client->socket);
-    free(client);
-    return NULL;
-}
-
-int main()
-{
+    // carrega as senha
     carregar_senhas(PATH_SENHAS);
 
-    int server_socket;
-    int client_socket;
-
-    struct sockaddr_in server_address;
-    struct sockaddr_in client_address;
-
-    socklen_t client_address_length =
-        sizeof(client_address);
-
-    // 1. Criação do socket.
-    server_socket = socket(
-        AF_INET,
-        SOCK_STREAM,
-        0
-    );
-
+    // cria o socket TCP
+    int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
-        perror("Erro ao criar socket");
+        perror("socket");
         return 1;
     }
 
-    // Permite reutilizar a porta rapidamente após o encerramento do servidor.
+    // reinicia o servidor
     int option = 1;
-    if (setsockopt(
-            server_socket,
-            SOL_SOCKET,
-            SO_REUSEADDR,
-            &option,
-            sizeof(option)
-        ) < 0) {
+    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    struct sockaddr_in endereco;
+    memset(&endereco, 0, sizeof(endereco));
+    endereco.sin_family = AF_INET;
 
-        perror("Erro no setsockopt");
+    // aceita conexoes
+    endereco.sin_addr.s_addr = INADDR_ANY;
+    endereco.sin_port = htons(PORT);
+
+    // configura o socket na porta correta
+    if (bind(server_socket, (struct sockaddr *)&endereco, sizeof(endereco)) < 0) {
+        perror("bind");
         close(server_socket);
         return 1;
     }
-    // Configuração do endereço do servidor.
-    memset(&server_address, 0, sizeof(server_address));
-    server_address.sin_family = AF_INET;
-    // INADDR_ANY permite conexões vindas de qualquer interface de rede.
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(PORT);
-    // 2. Associação do socket com IP e porta.
-    if (bind(
-            server_socket,
-            (struct sockaddr *)&server_address,
-            sizeof(server_address)
-        ) < 0) {
 
-        perror("Erro no bind");
-        close(server_socket);
-        return 1;
-    }
-    // 3. Coloca o socket em modo de escuta.
+    // coloca o socket em modo escuta
     if (listen(server_socket, MAX_CLIENTS) < 0) {
-
-        perror("Erro no listen");
+        perror("listen");
         close(server_socket);
         return 1;
     }
 
-    printf("=================================\n");
-    printf("       MEGA SENHA\n");
-    printf("=================================\n");
-    printf("Servidor iniciado na porta %d\n", PORT);
-    printf("Aguardando jogadores...\n\n");
+    printf( "=============================\n"
+            "         MEGA SENHA\n"
+            "=============================\n"
+            "Servidor na porta %d\n\n", PORT);
 
-    // 4. Loop principal do servidor.
-    int client_id = 1;
+
+    // loop em que o servidor fica constantemente aceitando conexoes
     while (1) {
-        // 5. Aceita uma nova conexão.
-        client_socket = accept(
-            server_socket,
-            (struct sockaddr *)&client_address,
-            &client_address_length
-        );
+        struct sockaddr_in endereco_cliente;
+        socklen_t tamanho = sizeof(endereco_cliente);
 
-        if (client_socket < 0) {
-            perror("Erro no accept");
+        // bloqueia ate um cliente se conectar
+        int socket_cliente = accept(server_socket, (struct sockaddr *) &endereco_cliente, &tamanho);
+        if (socket_cliente < 0) continue;
+        pthread_mutex_lock(&mutex);
+
+
+        // procura uma posicao livre em clients[]
+        Client *novo = NULL;
+        for (int i = 0; i < MAX_CLIENTS; i++) {
+            if (!clients[i].conectado) {
+                novo = &clients[i];
+                break;
+            }
+        }
+
+        // caso o servidor lote
+        if (novo == NULL) {
+            pthread_mutex_unlock(&mutex);
+            close(socket_cliente);
             continue;
         }
 
-        // Verifica limite de clientes.
-        pthread_mutex_lock(&clients_mutex);
-        if (client_count >= MAX_CLIENTS) {
-            pthread_mutex_unlock(&clients_mutex);
-            const char *message = "Servidor cheio.\n";
-            send(
-                client_socket,
-                message,
-                strlen(message),
-                0
-            );
-            close(client_socket);
-            continue;
-        }
+        // inicializa o cliente
+        novo->socket = socket_cliente;
+        novo->id = proximo_id_cliente++;
+        novo->nome[0] = '\0';
 
-        // Cria estrutura para o novo cliente.
-        Client *client = malloc(sizeof(Client));
+        // enquanto nao pertencer a um partida
+        novo->id_partida = -1;
 
-        if (client == NULL) {
-            perror("Erro ao alocar cliente");
-            pthread_mutex_unlock(&clients_mutex);
-            close(client_socket);
-            continue;
-        }
+        // coloca o cliente para digitar o seu nome
+        novo->estado = ESPERANDO_NOME;
+        novo->conectado = 1;
 
-        client->socket = client_socket;
-        client->id = client_id++;
-        client->partida.id_partida = -1;
+        int id = novo->id;
 
-        clients[client_count++] = *client;
+        pthread_mutex_unlock(&mutex);
 
-        pthread_mutex_unlock(&clients_mutex);
-
-        // 6. Cria uma thread para atender o novo cliente.
+        // cria thread para o cliente
         pthread_t thread;
-
-        if (pthread_create(
-                &thread,
-                NULL,
-                handle_client,
-                client
-            ) != 0) {
-            perror("Erro ao criar thread");
-            remove_client(client_socket);
-            close(client_socket);
-            free(client);
+        if (pthread_create(&thread, NULL, handle_client, &id) != 0) {
+            desconectar(id);
             continue;
         }
-        // A thread é independente. O servidor não precisa esperar por ela.
+
         pthread_detach(thread);
     }
+
+    // fecha o servidor
     close(server_socket);
+
     return 0;
 }

@@ -21,6 +21,7 @@
 #define DANDO_CHUTE             4
 #define CONFIRMANDO             5
 #define ESPERANDO_CONFIRMACAO   6
+#define ESPERANDO_NOME          7
 // estado do cliente de um processo client.c
 typedef struct {
     int estado;
@@ -29,6 +30,28 @@ typedef struct {
     Senha senha_atual;
 } EstadoCliente;
 
+// thread que fica constantemente esperando mensagens do servidor
+void *receive_messages(void *arg);
 
+// muda o valor de jogo.estado de forma segura (acesso usando mutex)
+void definir_estado(int estado);
+
+// retorna o valor de jogo.estado de forma segura (acesso usando mutex)
+int obter_estado();
+
+// envia uma mensagem para o servidor
+int enviar_linha(const char *texto, int socket);
+
+// printa o estado atual do jogo
+void mostrar_status();
+
+// processa uma senha recebida do servidor, que é do formato SENHA|'palavra'|'radical'|'dificuldade'
+void processar_senha(char *mensagem);
+
+// processa mensagem recebida do servidor
+void processar_servidor(char *msg);
+
+// verifica se a dica é válida, isto é, se existe no dicionário e se não contém o radical da senha
+int verificar_dica_valida(char* dica);
 
 #endif

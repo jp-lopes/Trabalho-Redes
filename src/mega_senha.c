@@ -94,13 +94,6 @@ char sortear_dificuldade() {
     }
 }
 
-// verifica se a dica é válida, isto é, se existe no dicionário e se não contém o radical da senha
-int verificar_dica_valida(char* dica, Senha s) {
-    formatar_string(dica); // formata string retirando acentos e letras maiúsculas
-    // verifica se não contém o radical da senha e se existe no dicionário
-    return !verificar_radical_contido_na_palavra(dica,s) && hash_buscar(dica);
-}
-
 // verifica se a tentativa é válida, isto é, se existe no dicionário
 int verificar_tentativa(char* tentativa) {
     formatar_string(tentativa); // formata string retirando acentos e letras maiúsculas
@@ -114,14 +107,6 @@ int compara_tentativa_e_senha(char* tentativa, Senha s) {
     return 0;
 }
 
-// Verifica se a senha já foi utilizada nessa partida, retorna 1 se é repetida e 0 se não é repetida.
-int verificar_senha_repetida(Partida p, Senha s) {
-    for(int i=0; i < p.pontos ;i++){
-        if(strcmp(s.palavra, p.historico[i].palavra) == 0) return 1;
-    }
-    return 0;
-}
-
 // Verifica se a palavra contém o radical da senha, retorna 1 se contiver e 0 se não contiver.
 int verificar_radical_contido_na_palavra(char* palavra, Senha s) {
     if (strstr(palavra, s.radical) != NULL) return 1; // contém o radical
@@ -129,18 +114,104 @@ int verificar_radical_contido_na_palavra(char* palavra, Senha s) {
 }
 
 // Função que remove os acentos de uma string e converte para letras minúsculas
-void formatar_string(char *str) {
-    char *sem_formatacao = "ABCDEFGHIJKLMNOPQRSTUVWXYZáàâãéèêíìîóòôõúùûçÁÀÂÃÉÈÊÍÌÎÓÒÔÕÚÙÛÇ";
-    char *com_formatacao = "abcdefghijklmnopqrstuvwxyzaaaaeeeiiioooouuucaaaaeeeiiioooouuuc";
-    // escaneia string trocando caractes especiais ou letras maiúsculas
-    for (int i = 0; str[i] != '\0'; i++) {
-        for (int j = 0; sem_formatacao[j] != '\0'; j++) {
-            if (str[i] == sem_formatacao[j]) {
-                str[i] = com_formatacao[j];
-                break;
-            }
+void formatar_string(char *str)
+{
+    unsigned char *origem = (unsigned char *)str;
+    unsigned char *destino = (unsigned char *)str;
+
+    while (*origem != '\0') {
+        // Caracteres ASCII possuem apenas um byte.
+        if (*origem < 0x80) {
+            unsigned char c = *origem;
+            // Converte A-Z para a-z.
+            if (c >= 'A' && c <= 'Z')
+                c = c - 'A' + 'a';
+            *destino++ = c;
+            origem++;
+            continue;
         }
+        // Muitos caracteres portugueses em UTF-8 começam pelo byte hexadecimal C3.
+        if (origem[0] == 0xC3 && origem[1] != '\0') {
+            unsigned char segundo = origem[1];
+            switch (segundo) {
+                // Variações de A/a.
+                case 0x80: 
+                case 0x81:
+                case 0x82:
+                case 0x83:
+                case 0x84:
+                case 0xA0:
+                case 0xA1:
+                case 0xA2:
+                case 0xA3:
+                case 0xA4:
+                    *destino++ = 'a';
+                    break;
+                // Variações de E/e.
+                case 0x88:
+                case 0x89:
+                case 0x8A:
+                case 0x8B:
+                case 0xA8:
+                case 0xA9:
+                case 0xAA:
+                case 0xAB:
+                    *destino++ = 'e';
+                    break;
+                // Variações de I/i.
+                case 0x8C:
+                case 0x8D:
+                case 0x8E:
+                case 0x8F:
+                case 0xAC:
+                case 0xAD:
+                case 0xAE:
+                case 0xAF:
+                    *destino++ = 'i';
+                    break;
+                // Variações de O/o.
+                case 0x92:
+                case 0x93:
+                case 0x94:
+                case 0x95:
+                case 0x96:
+                case 0xB2:
+                case 0xB3:
+                case 0xB4:
+                case 0xB5:
+                case 0xB6:
+                    *destino++ = 'o';
+                    break;
+                // Variações de U/u.
+                case 0x99:
+                case 0x9A:
+                case 0x9B:
+                case 0x9C:
+                case 0xB9:
+                case 0xBA:
+                case 0xBB:
+                case 0xBC:
+                    *destino++ = 'u';
+                    break;
+                // Ç e ç.
+                case 0x87:
+                case 0xA7:
+                    *destino++ = 'c';
+                    break;
+                default:
+                    // Caso apareça algum UTF-8 que não tratamos, preservamos os dois bytes originais.
+                    *destino++ = origem[0];
+                    *destino++ = origem[1];
+                    break;
+            }
+            origem += 2;
+            continue;
+        }
+        // Byte desconhecido: simplesmente copia.
+        *destino++ = *origem++;
     }
+    // Finaliza a nova string.
+    *destino = '\0';
 }
 
 
