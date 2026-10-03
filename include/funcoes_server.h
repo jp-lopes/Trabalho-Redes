@@ -61,6 +61,8 @@ typedef struct {
 typedef struct {
     int id_client_1;
     int id_client_2;
+    char nome_cliente_1[TAM_MAX_NOME_CLIENTE];
+    char nome_cliente_2[TAM_MAX_NOME_CLIENTE];
     int pontos;
 } Resultado;
 

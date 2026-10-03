@@ -22,6 +22,7 @@
 #define CONFIRMANDO             5
 #define ESPERANDO_CONFIRMACAO   6
 #define ESPERANDO_NOME          7
+#define ESPERANDO_NOME_OK       8
 // estado do cliente de um processo client.c
 typedef struct {
     int estado;

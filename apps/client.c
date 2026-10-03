@@ -76,27 +76,33 @@ int main(int argc, char *argv[])
     // thread principal responsavel pelo teclado
     char mensagem[BUFFER_SIZE];
     while (1) {
-        // obtem estado atual do jogo e printa no terminal dependendo dele
-        int estado = obter_estado();
+
         if (fgets(mensagem, sizeof(mensagem), stdin) == NULL) break;
+        //remove '\n'
+        mensagem[strcspn(mensagem, "\r\n")] = '\0';
+        if (mensagem[0] == '\0') continue;
+        // se digitar 'sair'
+        if (strcmp(mensagem, "/sair") == 0) break;
         
+        // obtem estado atual do jogo
+        int estado = obter_estado();
+
         // esperando nome
         if (estado == ESPERANDO_NOME) {
             char envio[BUFFER_SIZE+5];
             snprintf(envio, sizeof(envio), "NOME|%s", mensagem); 
             enviar_linha(envio, socket_fd);
+            definir_estado(ESPERANDO_NOME_OK);
             continue;
         }
 
         printf("> ");
         fflush(stdout);
 
-        //remove '\n'
-        mensagem[strcspn(mensagem, "\r\n")] = '\0';
-        if (mensagem[0] == '\0') continue;
-
-        // se digitar 'sair'
-        if (strcmp(mensagem, "/sair") == 0) break;
+        if (estado == ESPERANDO_NOME_OK) {
+            printf("Aguardando confirmação do servidor");
+            continue;
+        }
 
         // chat global
         if (estado == CHAT_GLOBAL) {

@@ -81,8 +81,22 @@ void registrar_ranking(Partida *p)
     if (qtd_ranking >= MAX_RANKING)
         return;
 
+    pthread_mutex_lock(&mutex);
+    Client* c1 = buscar_cliente_id(p->id_client_1);
+    if(c1 == NULL){
+        return;
+    } 
+
+    Client* c2 = buscar_cliente_id(p->id_client_2);
+    if(c2 == NULL){
+        return;
+    } 
+    pthread_mutex_unlock(&mutex);
+
     ranking[qtd_ranking].id_client_1 = p->id_client_1;
     ranking[qtd_ranking].id_client_2 = p->id_client_2;
+    strcpy(ranking[qtd_ranking].nome_cliente_1, c1->nome);
+    strcpy(ranking[qtd_ranking].nome_cliente_2, c2->nome);
     ranking[qtd_ranking].pontos = p->pontos;
 
     qtd_ranking++;
@@ -104,7 +118,7 @@ void enviar_ranking(int socket)
     }
 
     for (int i = 0; i < limite; i++) {
-        snprintf(mensagem, sizeof(mensagem), "RANKING|%d. Clientes %d + %d - %d pontos", i + 1, ranking[i].id_client_1, ranking[i].id_client_2, ranking[i].pontos);
+        snprintf(mensagem, sizeof(mensagem), "RANKING|%d. Jogadores \"%s\" e \"%s\" - %d pontos", i + 1, ranking[i].nome_cliente_1, ranking[i].nome_cliente_2, ranking[i].pontos);
         enviar_mensagem_socket(socket, mensagem);
     }
     enviar_mensagem_socket(socket, "RANKING_FIM");
@@ -601,8 +615,9 @@ void processar_mensagem(int id, char *mensagem)
             strncpy(c->nome, mensagem+5, TAM_MAX_NOME_CLIENTE-1);
             c->nome[TAM_MAX_NOME_CLIENTE-1] = '\0';
             c->estado = CHAT_GLOBAL;
-            pthread_mutex_unlock(&mutex);
+            printf("Cliente %d escolheu o apelido %s\n", c->id, c->nome);
             enviar_mensagem_socket(c->socket, "NOME_OK");
+            pthread_mutex_unlock(&mutex);
         }
         return;
     }
