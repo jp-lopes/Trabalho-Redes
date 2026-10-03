@@ -158,7 +158,5 @@ void processar_mensagem(int id, char *mensagem);
 // remove um cliente do servidor e trata uma possível partida em andamento
 void desconectar(int id);
 
-// thread responsável por receber as mensagens de um cliente
-void* handle_client(void *arg);
 
 #endif

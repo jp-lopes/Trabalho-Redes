@@ -82,12 +82,14 @@ void registrar_ranking(Partida *p)
         return;
 
     pthread_mutex_lock(&mutex);
+    
     Client* c1 = buscar_cliente_id(p->id_client_1);
     Client* c2 = buscar_cliente_id(p->id_client_2);
-    pthread_mutex_unlock(&mutex);
 
-    if(c1 == NULL || c2 == NULL)
+    if(c1 == NULL || c2 == NULL) {
+        pthread_mutex_unlock(&mutex);
         return;
+    }
 
     ranking[qtd_ranking].id_client_1 = p->id_client_1;
     ranking[qtd_ranking].id_client_2 = p->id_client_2;
@@ -99,6 +101,8 @@ void registrar_ranking(Partida *p)
 
     // ordena o ranking pela pontuação
     qsort(ranking, qtd_ranking,sizeof(Resultado), comparar_resultados);
+
+    pthread_mutex_unlock(&mutex);
 }
 
 // envia o ranking para um cliente

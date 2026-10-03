@@ -48,6 +48,7 @@ int main(int argc, char *argv[])
     // erro caso o cliente nao consiga carregar o dicionario
     if (!hash_inicializar(PATH_DICIONARIO)) {
         printf("Erro ao carregar dicionario.\n");
+        close(socket_fd);   
         return 1;
     }
 
