@@ -17,7 +17,13 @@ int main(void) {
 
     // reinicia o servidor
     int option = 1;
-    setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option));
+    
+    if(setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &option, sizeof(option))<0){
+        perror("setsockopt");
+        close(server_socket);
+        return 1;
+    }
+
     struct sockaddr_in endereco;
     memset(&endereco, 0, sizeof(endereco));
     endereco.sin_family = AF_INET;

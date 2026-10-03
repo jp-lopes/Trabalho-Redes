@@ -34,12 +34,14 @@ int main(int argc, char *argv[])
     // converte o IP em texto
     if (inet_pton(AF_INET, ip, &endereco.sin_addr) <= 0) {
         printf("IP invalido.\n");
+        close(socket_fd);
         return 1;
     }
 
     // conecta com o servidor
     if (connect(socket_fd, (struct sockaddr *)&endereco, sizeof(endereco)) < 0) {
         perror("connect");
+        close(socket_fd); 
         return 1;
     }
 

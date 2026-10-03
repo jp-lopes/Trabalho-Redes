@@ -83,15 +83,11 @@ void registrar_ranking(Partida *p)
 
     pthread_mutex_lock(&mutex);
     Client* c1 = buscar_cliente_id(p->id_client_1);
-    if(c1 == NULL){
-        return;
-    } 
-
     Client* c2 = buscar_cliente_id(p->id_client_2);
-    if(c2 == NULL){
-        return;
-    } 
     pthread_mutex_unlock(&mutex);
+
+    if(c1 == NULL || c2 == NULL)
+        return;
 
     ranking[qtd_ranking].id_client_1 = p->id_client_1;
     ranking[qtd_ranking].id_client_2 = p->id_client_2;
