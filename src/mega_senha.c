@@ -96,14 +96,27 @@ char sortear_dificuldade() {
 
 // verifica se a tentativa é válida, isto é, se existe no dicionário
 int verificar_tentativa(char* tentativa) {
-    formatar_string(tentativa); // formata string retirando acentos e letras maiúsculas
+    // formata string retirando acentos e letras maiúsculas
+    char tentativa_formatada[TAM_PALAVRA];
+    strcpy(tentativa_formatada, tentativa);
+    formatar_string(tentativa_formatada);
     // verifica se a palavra existe no dicionário
-    return hash_buscar(tentativa);
+    return hash_buscar(tentativa_formatada);
 }
 
 // retorna 1 se a pessoa acertou a senha, e 0 caso contrário
 int compara_tentativa_e_senha(char* tentativa, Senha s) {
-    if (strcmp(tentativa, s.palavra) == 0) return 1;
+    // formata strings retirando acentos e letras maiúsculas
+    char senha_formatada[TAM_PALAVRA];
+    strcpy(senha_formatada, s.palavra);
+    formatar_string(senha_formatada);
+
+    char tentativa_formatada[TAM_PALAVRA];
+    strcpy(tentativa_formatada, tentativa);
+    formatar_string(tentativa_formatada);
+
+    // compara strings formatadas
+    if (strcmp(tentativa_formatada, senha_formatada) == 0) return 1;
     return 0;
 }
 

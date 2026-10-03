@@ -179,7 +179,7 @@ void processar_servidor(char* msg)
     // atualização do cronômetro em 60, 30 e 10 segundos
     if (strncmp(msg, "TEMPO|", 6) == 0) {
         jogo.tempo_restante = atoi(msg + 6);
-        if (jogo.tempo_restante == 60 || jogo.tempo_restante == 30 || jogo.tempo_restante == 10)  mostrar_status();
+        if (jogo.tempo_restante == 0)  mostrar_status();
         return;
     }
 

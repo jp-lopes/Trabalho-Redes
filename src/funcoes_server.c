@@ -269,8 +269,6 @@ void* thread_timer(void *arg)
 
         // acabou um período de 60 segundos
         if (restante == 0) {
-
-            // se terminou o primeiro tempo, espera os dois confirmarem
             if (p->tempo == 1) {
                 p->client_1_confirmou = 0;
                 p->client_2_confirmou = 0;
@@ -284,13 +282,14 @@ void* thread_timer(void *arg)
                     client_2->estado = CONFIRMANDO;
                     enviar_mensagem_socket(client_2->socket, "FIM_TEMPO");
                 }
+
+                pthread_mutex_unlock(&mutex);
+                return NULL;
             }
 
-            // se terminou o segundo tempo, termina a partida
-            else {
-                finalizar_partida(p);
-            }
+            // terminou o segundo tempo
             pthread_mutex_unlock(&mutex);
+            finalizar_partida(p);
             return NULL;
         }
         pthread_mutex_unlock(&mutex);
@@ -298,7 +297,6 @@ void* thread_timer(void *arg)
     }
     return NULL;
 }
-
 
 // inicia o cronômetro de uma partida
 void iniciar_timer(Partida *p)
