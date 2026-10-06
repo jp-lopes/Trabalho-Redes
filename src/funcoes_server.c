@@ -648,6 +648,9 @@ void processar_mensagem(int id, char *mensagem)
         if (strcmp(mensagem, "DICA|/pass") == 0) {
             Client *c = buscar_cliente_id(id);
             Partida *p = buscar_partida_id(c->id_partida);
+            Client *c_adivinha = buscar_cliente_id(p->id_cliente_adivinha);
+            enviar_mensagem_socket(c_adivinha->socket, "PASS");
+            printf("enviando PASS para o cliente que adivinha");
             // troca a senha e envia para os jogadores
             p->senha_atual = nova_senha(p);
             enviar_senha(p);

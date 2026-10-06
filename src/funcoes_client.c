@@ -228,6 +228,12 @@ void processar_servidor(char* msg)
         return;
     }
 
+    // recebe a senha (se for o jogador que dá as dicas)
+    if (strncmp(msg, "PASS", 4) == 0) {
+        printf("O outro jogador trocou a senha!\n");
+        return;
+    }
+
     // recebe a dica (se for o jogador que adivinha a senha)
     if (strncmp(msg, "DICA|", 5) == 0) {
         definir_estado(DANDO_CHUTE);
