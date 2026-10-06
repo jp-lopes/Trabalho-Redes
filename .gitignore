@@ -2,3 +2,5 @@ bin/client
 bin/server
 /.vscode
 /outros
+bin/client.dSYM
+bin/server.dSYM
